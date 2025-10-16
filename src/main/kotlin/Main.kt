@@ -1,5 +1,9 @@
 package org.example
 
+import kotlinx.coroutines.runBlocking
+
 fun main() {
-    println("Hello World!")
+    runBlocking {
+        task10()
+    }
 }
