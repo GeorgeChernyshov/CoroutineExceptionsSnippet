@@ -36,5 +36,55 @@ fun main() {
 
         processor.clearResults()
         delay(500)
+
+        val dProcessor = DocumentProcessor(this) // Use runBlocking's scope for testing
+
+        // Collect processor status
+        launch {
+            dProcessor.processorStatus.collect { println("\nPROCESSOR STATUS: $it") }
+        }
+        // Collect individual document statuses
+        launch {
+            dProcessor.documentStatuses.collect { statuses ->
+                if (statuses.isNotEmpty()) {
+                    println("--- DOCUMENT STATUSES ---")
+                    statuses.forEach { (id, status) -> println("  $id: $status") }
+                }
+            }
+        }
+        // Collect processed documents
+        launch {
+            dProcessor.processedDocuments.collect { docs ->
+                if (docs.isNotEmpty()) {
+                    println("\n--- FINAL PROCESSED DOCUMENTS ---")
+                    docs.forEach { println("  $it") }
+                }
+            }
+        }
+
+        val documentIdsToProcess = listOf(
+            "doc000", // All OK
+            "doc001", // Fetch fails once, then retries successfully
+            "doc002", // Fetch fails permanently (IOException)
+            "doc003_error_parse", // ParsingException
+            "doc004_critical_keyword_error", // Enrichment critical failure
+            "doc005", // Validation failure
+            "doc006", // Archiving failure
+            "doc007_related_doc_timeout", // Enrichment optional timeout
+            "doc008_optional_api_error" // Enrichment optional API error
+        )
+
+        dProcessor.startProcessingBatch(documentIdsToProcess)
+
+        // Simulate user cancellation after some time (e.g., to see partial results)
+        delay(2500) // Adjust delay as needed
+        println("--- SIMULATING USER CANCELLATION ---")
+        dProcessor.cancelAllProcessing()
+
+
+        delay(5000) // Give time for cancellation to propagate and for remaining tasks to complete cleanup
+        println("\n--- CLEARING RESULTS ---")
+        processor.clearResults()
+        delay(1000)
     }
 }
